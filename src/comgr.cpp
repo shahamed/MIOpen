@@ -990,7 +990,7 @@ void BuildHip(const std::string& name,
                return StartsWith(s, "--std=") || StartsWith(s, "-std=");
            }))
             opts.push_back("-std=c++17");
-
+        opts.push_back("-I/opt/rocm/include");
         HiprtcProgram prog(name, text);
         prog.Compile(opts);
         prog.GetCode(binary);
