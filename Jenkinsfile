@@ -404,7 +404,6 @@ def CheckPerfDbValid(Map conf=[:]){
 /// TestSet := { All | Smoke* | <Performance Dataset> | Build-only }
 ///   * "All" corresponds to "cmake -DMIOPEN_TEST_ALL=On".
 ///   * "Smoke" (-DMIOPEN_TEST_ALL=Off) is the default and usually not specified.
-///   * "Codecov" is optional code coverage analysis.
 ///   * "Performance Dataset" is a performance test with a specified dataset.
 /// Target := { gfx908 | gfx90a | Vega20 | Vega10 | Vega* | gfx1030 } [ Xnack+ ]
 ///   * "Vega" (gfx906 or gfx900) is the default and usually not specified.
