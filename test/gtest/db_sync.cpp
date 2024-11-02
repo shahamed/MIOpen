@@ -333,23 +333,6 @@ void ParseFDBbVal(const std::string& val, std::vector<FDBVal>& fdb_vals)
     }
 }
 
-auto GetPerfDb(const fs::path& filename)
-{
-    using cachemap = const std::unordered_map<std::string, CacheItem>&;
-    static std::unordered_map<std::string, cachemap> db_cache;
-    if(db_cache.find(filename.string()))
-    {
-        return db_cache.at(filename.string());
-    }
-    const auto& perf_db =
-        miopen::ReadonlyRamDb::GetCached(miopen::DbKinds::PerfDb, filename.string(), true);
-    ASSERT_TRUE(!perf_db.GetCacheMap().empty()) << "PDB does not have any entries";
-    const auto& perf_db_map = perf_db.GetCacheMap();
-    db_cache.emplace(std::make_pair(filename.string(), perf_db_map));
-
-    return perf_db_map;
-}
-
 void GetPerfDbVals(const fs::path& filename,
                    const conv::ProblemDescription& problem_config,
                    std::unordered_map<std::string, std::string>& vals,
@@ -381,7 +364,9 @@ void GetPerfDbVals(const fs::path& filename,
             throw std::runtime_error(sql.ErrorMessage());
     }
 #else
-    const auto& perf_db_map = GetPerfDb();
+    const auto& perf_db =
+        miopen::ReadonlyRamDb::GetCached(miopen::DbKinds::PerfDb, filename.string(), true);
+    const auto& perf_db_map = perf_db.GetCacheMap();
 
     std::ostringstream ss;
     conv::ProblemDescription::VisitAll(problem_config, [&](auto&& value, auto&&) {
@@ -391,20 +376,21 @@ void GetPerfDbVals(const fs::path& filename,
     });
     const auto key = ss.str();
 
-    std::istringstream pdb_line {perf_db_map.at(key).content};
-    char fragment[1024];
-    while(pdb_line.getline(fragment, 1024, ';'))
+    if(perf_db_map.find(key) != perf_db_map.end())
     {
-        std::cout << "pdb read " << fragment << std::endl;
-        std::string id_val {fragment};
-        const auto id_size = id_val.find(':');
-        ASSERT_TRUE(id_size != std::string::npos) << "Ill formed value: " << id_val;
-        auto id     = id_val.substr(0, id_size);
-        auto cfg    = id_val.substr(id_size + 1);
-        vals.emplace(id, cfg);
+        std::istringstream pdb_line {perf_db_map.at(key).content};
+        char fragment[1024];
+        while(pdb_line.getline(fragment, 1024, ';'))
+        {
+            std::string id_val {fragment};
+            const auto id_size = id_val.find(':');
+            ASSERT_TRUE(id_size != std::string::npos) << "Ill formed value: " << id_val;
+            auto id     = id_val.substr(0, id_size);
+            auto cfg    = id_val.substr(id_size + 1);
+            vals.emplace(id, cfg);
+        }
+        select_query = " Loading "+key+" from "+filename.string();
     }
-    select_query = " Loading "+key+" from "+filename.string();
-
 #endif
 }
 
