@@ -29,6 +29,7 @@
 #include <miopen/conv/data_invoke_params.hpp>
 #include <miopen/conv/wrw_invoke_params.hpp>
 #include <miopen/batched_transpose_sol.hpp>
+#include <miopen/buffer_info.hpp>
 #include <miopen/tensor_ops.hpp>
 #include <miopen/miopen_internal.h>
 
@@ -376,9 +377,10 @@ public:
         Run(handle, kernels, out_ptr, buf_handle.get());
     }
 
-    void ZeroOutBuffer()
+    void ZeroOutBuffer(const Handle& handle)
     {
-        [[maybe_unused]] auto status = hipMemsetAsync(buf_handle.get(), 0, tensor_sz);
+        [[maybe_unused]] auto status =
+            hipMemsetAsync(buf_handle.get(), 0, tensor_sz, handle.GetStream());
         assert(status == hipSuccess);
     }
 
@@ -600,7 +602,8 @@ inline bool CKWrwRequireWorkspace(
     size_t K_per_group = K / G;
 
     return (alpha_beta_case == BILINEAR || alpha_beta_case == SCALE) ||
-           (data_type == miopenHalf && (is_odd(C_per_group) || is_odd(K_per_group)));
+           ((data_type == miopenHalf || data_type == miopenBFloat16) &&
+            (is_odd(C_per_group) || is_odd(K_per_group)));
 }
 
 /// \todo move to a cpp file
@@ -734,7 +737,7 @@ ConvSolution InitInvokerFactoryNCHW(const ExecutionContext& ctx,
             /// \todo: Will need SetTensor() to properly zero out non-packed tensors
             if(output_tr_inst.GetConvOperandTag() == internal::ConvOperandTag::Weights)
             {
-                output_tr_inst.ZeroOutBuffer();
+                output_tr_inst.ZeroOutBuffer(handle);
             }
 
             std::array<internal::TransposeInstanceTagged*, 3> tr_ptrs = {

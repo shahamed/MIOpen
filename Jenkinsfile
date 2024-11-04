@@ -201,9 +201,9 @@ def getDockerImage(Map conf=[:])
 {
     env.DOCKER_BUILDKIT=1
     def prefixpath = conf.get("prefixpath", "/opt/rocm") // one image for each prefix 1: /usr/local 2:/opt/rocm
-    def gpu_arch = "gfx908;gfx90a;gfx942;gfx1030;gfx1100;gfx1101;gfx1102;gfx1200" // prebuilt dockers should have all the architectures enabled so one image can be used for all stages
+    def gpu_arch = "gfx908;gfx90a;gfx942;gfx1100" // prebuilt dockers should have all the architectures enabled so one image can be used for all stages
     def mlir_build = conf.get("mlir_build", "ON") // always ON
-    def dockerArgs = "--build-arg BUILDKIT_INLINE_CACHE=1 --build-arg PREFIX=${prefixpath} --build-arg GPU_TARGETS='${gpu_arch}' --build-arg USE_MLIR='${mlir_build}' "
+    def dockerArgs = "--build-arg BUILDKIT_INLINE_CACHE=1 --build-arg PREFIX=${prefixpath} --build-arg GPU_ARCHS='\"${gpu_arch}\"' --build-arg USE_MLIR='${mlir_build}' "
     if(env.CCACHE_HOST)
     {
         def check_host = sh(script:"""(printf "PING\r\n";) | nc -N ${env.CCACHE_HOST} 6379 """, returnStdout: true).trim()
@@ -262,7 +262,7 @@ def buildHipClangJob(Map conf=[:]){
         def lfs_pull = conf.get("lfs_pull", false)
 
         def retimage
-        gitStatusWrapper(credentialsId: "${env.status_wrapper_creds}", gitHubContext: "Jenkins - ${variant}", account: 'ROCm', repo: 'MIOpen') {
+        gitStatusWrapper(credentialsId: "${env.miopen_git_creds}", gitHubContext: "Jenkins - ${variant}", account: 'ROCm', repo: 'MIOpen') {
             try {
                 (retimage, image) = getDockerImage(conf)
                 if (needs_gpu) {
@@ -291,7 +291,7 @@ def buildHipClangJob(Map conf=[:]){
             }
 
             withDockerContainer(image: image, args: dockerOpts + ' -v=/var/jenkins/:/var/jenkins') {
-                timeout(time: 300, unit:'MINUTES')
+                timeout(time: 420, unit:'MINUTES')
                 {
                     if (lfs_pull) {
                         sh "git lfs pull --exclude="
@@ -565,7 +565,7 @@ pipeline {
             when {
                 expression { params.BUILD_DOCKER && params.TARGET_NOGPU && params.DATATYPE_NA }
             }
-            agent{ label rocmnode("nogpu") }
+            agent{ label rocmnode("gfx90a") }
             steps{
                 getDockerImage()
             }
@@ -976,7 +976,7 @@ pipeline {
                         buildHipClangJobAndReboot(lfs_pull: true,
                                                   setup_flags: "-DMIOPEN_TEST_DBSYNC=1",
                                                   make_targets: 'test_db_sync',
-                                                  execute_cmd: 'MIOPEN_TEST_DBSYNC=1 ./bin/test_db_sync',
+                                                  execute_cmd: './bin/test_db_sync',
                                                   needs_gpu:false,
                                                   needs_reboot:false,
                                                   build_install: "true")
@@ -995,7 +995,7 @@ pipeline {
                         buildHipClangJobAndReboot(lfs_pull: true,
                                                   setup_flags: "-DMIOPEN_TEST_DBSYNC=1",
                                                   make_targets: 'test_db_sync',
-                                                  execute_cmd: 'MIOPEN_TEST_DBSYNC=1 ./bin/test_db_sync',
+                                                  execute_cmd: './bin/test_db_sync',
                                                   needs_gpu:false,
                                                   needs_reboot:false,
                                                   build_install: "true")
@@ -1014,7 +1014,7 @@ pipeline {
                         buildHipClangJobAndReboot(lfs_pull: true,
                                                   setup_flags: "-DMIOPEN_TEST_DBSYNC=1",
                                                   make_targets: 'test_db_sync',
-                                                  execute_cmd: 'MIOPEN_TEST_DBSYNC=1 ./bin/test_db_sync',
+                                                  execute_cmd: './bin/test_db_sync',
                                                   needs_gpu:false,
                                                   needs_reboot:false,
                                                   build_install: "true")

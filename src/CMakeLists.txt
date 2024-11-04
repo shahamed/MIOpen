@@ -127,6 +127,8 @@ set( MIOpen_Source
     fusion/problem_description.cpp
     generic_search.cpp
     getitem_api.cpp
+    glu/problem_description.cpp
+    glu_api.cpp
     graphapi/convolution.cpp
     graphapi/conv_bias_res_add_activ_forward_executor.cpp
     graphapi/engine.cpp
@@ -150,6 +152,8 @@ set( MIOpen_Source
     getitem/problem_description.cpp
     kernel_build_params.cpp
     kernel_warnings.cpp
+    kthvalue/problem_description.cpp
+    kthvalue_api.cpp
     layernorm_api.cpp
     layernorm/problem_description.cpp
     load_file.cpp
@@ -158,6 +162,8 @@ set( MIOpen_Source
     lrn_api.cpp
     mha/mha_descriptor.cpp
     mha/problem_description.cpp
+    multimarginloss/problem_description.cpp
+    multimarginloss_api.cpp
     op_args.cpp
     operator.cpp
     performance_config.cpp
@@ -179,14 +185,21 @@ set( MIOpen_Source
     rnn/rnn_util.cpp
     rnn/selector.cpp
     rnn/Solutions/rnn_transformer.cpp
-    rnn/Solutions/modular_base.cpp
+    rnn/Solutions/Base/fw_data_modular.cpp
+    rnn/Solutions/Base/bw_weights_modular.cpp
+    rnn/Solutions/Base/bw_data_modular.cpp
+    rnn/Solutions/fwd_s_stream.cpp
     rnn/Solutions/bwd_s_stream.cpp
     rnn/Solutions/bwd_multi_stream.cpp
+    rnn/Solutions/bww_s_steam.cpp
+    rnn/Solutions/bww_multi_stream.cpp
     rope_api.cpp
     rope/problem_description.cpp
     scalar.cpp
     sigmoidfocalloss/problem_description.cpp
     sigmoid_focal_loss_api.cpp
+    softmarginloss/problem_description.cpp 
+    softmarginloss_api.cpp
     softmax.cpp
     softmax_api.cpp
     softmax/problem_description.cpp
@@ -291,16 +304,21 @@ set( MIOpen_Source
     solver/conv_ck_igemm_fwd_bias_res_add_activ_fused.cpp
     solver/conv_ocl_dir2Dfwd_fused.cpp
     solver/conv_winoRxS_fused.cpp
+    solver/glu/backward_glu.cpp
+    solver/glu/forward_glu.cpp
     solver/groupnorm/forward_groupnorm.cpp
     solver/getitem/backward_getitem.cpp
+    solver/kthvalue/forward_kthvalue.cpp
     solver/layernorm/backward_t5layernorm.cpp
     solver/layernorm/forward_addlayernorm.cpp
     solver/layernorm/forward_layernorm.cpp
     solver/layernorm/forward_layernorm2d_ck.cpp
     solver/layernorm/forward_layernorm4d_ck.cpp
     solver/layernorm/forward_t5layernorm.cpp
+    solver/mha/mha_ck_fa_v2_solver_forward.cpp
     solver/mha/mha_solver_backward.cpp
     solver/mha/mha_solver_forward.cpp
+    solver/multimarginloss/forward_multimarginloss.cpp
     solver/pooling/forward2d.cpp
     solver/pooling/forwardNaive.cpp
     solver/pooling/forwardNd.cpp
@@ -321,6 +339,8 @@ set( MIOpen_Source
     solver/sigmoidfocalloss/backward_unreduce_sigmoid_focal_loss.cpp
     solver/sigmoidfocalloss/forward_reduce_sigmoid_focal_loss.cpp
     solver/sigmoidfocalloss/forward_unreduce_sigmoid_focal_loss.cpp
+    solver/softmarginloss/backward_softmarginloss.cpp
+    solver/softmarginloss/forward_softmarginloss.cpp
     solver/softmax/attn_softmax.cpp
     solver/softmax/softmax.cpp
     subbuffers.cpp
@@ -368,6 +388,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         ${COMPOSABLE_KERNEL_DYNAMIC_ASM_INCLUDE}
         ${GPU_GENERAL_TENSOR_REORDER_KERNEL_HIP_INCLUDE}
         include/miopen/implicitgemm_params.hpp
+        kernels/activation_functions.hpp
         kernels/gpu_reference_kernel/fp8_kern_types.h
         kernels/Conv_Winograd_v13_3_12_fp16dot_stride1.inc
         kernels/Conv_Winograd_v13_3_12_fp16dot_stride2_dec.inc
@@ -474,16 +495,17 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/miopen_type_traits.hpp
         kernels/miopen_utility.hpp
         kernels/neuron.inc
+        kernels/radix.hpp
         kernels/rocm_version.inc
         kernels/stride_array.hpp
         kernels/tensor_view.hpp
         kernels/utilities.inc
+        kernels/warp_reduce.hpp
         kernels/winograd/Conv_Winograd_Fury_v2_4_1_gfx11_1536vgprs_fp16_fp16acc_f2x3_c16_stride1.inc
         kernels/winograd/Conv_Winograd_Fury_v2_4_1_gfx11_1536vgprs_fp16_fp16acc_f2x3_c32_stride1.inc
         kernels/winograd/Conv_Winograd_Fury_v2_4_1_gfx11_1024vgprs_fp16_fp16acc_f2x3_c16_stride1.inc
         kernels/winograd/Conv_Winograd_Fury_v2_4_1_metadata.inc
         kernels/workaround_issue_1431.hpp
-        kernels/warp_reduce.hpp
         kernels/xform_bidirect_winograd_code.inc
         kernels/xform_data_filter.inc
         kernels/xform_kd_cov2.inc
@@ -515,11 +537,14 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/MIOpenConvDirUni.cl
         kernels/MIOpenConvDirBatchNormActiv.cl
         kernels/MIOpenConvDirGenFwd.cl
+        kernels/MIOpenGLU.cpp
         kernels/MIOpenGroupNorm.cpp
         kernels/MIOpenGetitem.cpp
+        kernels/MIOpenKthvalue.cpp
         kernels/MIOpenLayerNorm.cpp
         kernels/MIOpenLRNBwd.cl
         kernels/MIOpenLRNFwd.cl
+        kernels/MIOpenMultiMarginLoss.cpp
         kernels/MIOpenNeuron.cl
         kernels/MIOpenPReLU.cpp
         kernels/MIOpenPooling.cl
@@ -532,8 +557,9 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/MIOpenConv1x1J1_stride.cl
         kernels/MIOpenReduceCalculation.cpp
         kernels/MIOpenReduceExtreme.cpp
-        kernels/MIOpenRoPE.cpp
         kernels/MIOpenReduceSum.cpp
+        kernels/MIOpenRoPE.cpp
+        kernels/MIOpenSoftMarginLoss.cpp
         kernels/MIOpenSoftmax.cl
         kernels/MIOpenSoftmaxAttn.cpp
         kernels/MIOpenUtilKernels3.cl
@@ -610,8 +636,8 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/Conv_Winograd_v30_3_1_fp32_f3x2_stride2.s
         kernels/MIOpenConvBwdBias.cl
         kernels/MIOpenBatchNormActivInfer.cl
+        kernels/MIOpenBatchNormActivInferHIP.cpp
         kernels/MIOpenCTCLoss.cl
-        kernels/MIOpenDropout.cl
         kernels/MIOpenDropoutHIP.cpp
         kernels/winograd/Conv_Winograd_Fury_v2_4_1_fp16_fp16acc_f2x3_c16_stride1.s
         kernels/winograd/Conv_Winograd_Fury_v2_4_1_fp16_fp16acc_f2x3_c32_stride1.s
@@ -650,13 +676,16 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         adam.cpp
         addlayernorm.cpp
         cat.cpp
+        exec_utils.cpp
         groupnorm.cpp
         getitem.cpp
+        glu.cpp
         kernel_cache.cpp
+        kthvalue.cpp
         layernorm.cpp
         lrn.cpp
         mlo_dir_conv.cpp
-        exec_utils.cpp
+        multimarginloss.cpp
         ocl/activ_ocl.cpp
         ocl/batchnormocl.cpp
         ocl/convolutionocl.cpp
@@ -682,6 +711,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         reduceextreme.cpp
         rope.cpp
         sigmoid_focal_loss.cpp
+        softmarginloss.cpp
         transformers_adam_w.cpp
         ${PROJECT_BINARY_DIR}/db_path.cpp
         )
@@ -826,7 +856,7 @@ target_include_directories(MIOpen PUBLIC
 )
 
 if(MIOPEN_USE_COMPOSABLEKERNEL)
-set(MIOPEN_CK_LINK_FLAGS composable_kernel::device_other_operations composable_kernel::device_gemm_operations composable_kernel::device_conv_operations composable_kernel::device_reduction_operations hip::host)
+set(MIOPEN_CK_LINK_FLAGS composable_kernel::device_other_operations composable_kernel::device_gemm_operations composable_kernel::device_conv_operations composable_kernel::device_reduction_operations composable_kernel::device_mha_operations hip::host)
 endif()
 
 if(WIN32)

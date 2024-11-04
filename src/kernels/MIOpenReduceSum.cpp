@@ -30,7 +30,6 @@
 
 #include "float_types.h"
 #include "tensor_view.hpp"
-#include "warp_reduce.hpp"
 #include "block_reduce.hpp"
 
 template <typename TO>

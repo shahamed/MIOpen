@@ -27,9 +27,8 @@
 #ifndef MIOPEN_TENSOR_VIEW_UTIL_HPP_
 #define MIOPEN_TENSOR_VIEW_UTIL_HPP_
 
-#include <miopen/common.hpp>
-#include <miopen/tensor.hpp>
 #include "../../kernels/tensor_view.hpp"
+#include <miopen/tensor.hpp>
 
 namespace miopen {
 
@@ -81,6 +80,28 @@ inline void slice_tv(tensor_view_t<N>& tensor_view, int32_t sliceCount, const in
     }
 }
 
+template <int N>
+inline tensor_view_t<N - 1> get_tv_without_dim(const tensor_view_t<N>& origin_tv, int selected_dim)
+{
+    tensor_view_t<N - 1> res{};
+    for(int i = 0; i < N; ++i)
+    {
+        if(i == selected_dim)
+            continue;
+        if(i < selected_dim)
+        {
+            res.size[i]   = origin_tv.size[i];
+            res.stride[i] = origin_tv.stride[i];
+        }
+        else
+        {
+            res.size[i - 1]   = origin_tv.size[i];
+            res.stride[i - 1] = origin_tv.stride[i];
+        }
+    }
+    return res;
+}
+
 } // namespace miopen
 
-#endif // MIOPEN_TENSOR_REORDER_UTIL_HPP_
+#endif // MIOPEN_TENSOR_VIEW_UTIL_HPP_

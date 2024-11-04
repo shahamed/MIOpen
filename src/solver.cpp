@@ -24,15 +24,16 @@
  *
  *******************************************************************************/
 
-#include <miopen/solver.hpp>
-
 #include <miopen/activ/solvers.hpp>
 #include <miopen/adam/solvers.hpp>
 #include <miopen/batchnorm/solvers.hpp>
 #include <miopen/cat/solvers.hpp>
+#include <miopen/conv/solvers.hpp>
 #include <miopen/fusion/solvers.hpp>
+#include <miopen/glu/solvers.hpp>
 #include <miopen/groupnorm/solvers.hpp>
 #include <miopen/getitem/solvers.hpp>
+#include <miopen/kthvalue/solvers.hpp>
 #include <miopen/layernorm/solvers.hpp>
 #include <miopen/pooling/solvers.hpp>
 #include <miopen/prelu/solvers.hpp>
@@ -40,7 +41,9 @@
 #include <miopen/rope/solvers.hpp>
 #include <miopen/mha/solvers.hpp>
 #include <miopen/sigmoidfocalloss/solvers.hpp>
+#include <miopen/softmarginloss/solvers.hpp>
 #include <miopen/softmax/solvers.hpp>
+#include <miopen/multimarginloss/solvers.hpp>
 
 #include <miopen/conv_algo_name.hpp>
 #include <miopen/db.hpp>
@@ -57,6 +60,14 @@
 MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_DEBUG_ENABLE_DEPRECATED_SOLVERS)
 
 namespace miopen {
+
+namespace debug {
+
+// NOLINTNEXTLINE (cppcoreguidelines-avoid-non-const-global-variables)
+bool enable_deprecated_solvers = false;
+
+} // namespace debug
+
 namespace solver {
 
 std::ostream& operator<<(std::ostream& os, const KernelInfo& k)
@@ -680,7 +691,27 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
     Register(registry, ++id, Primitive::RoPE, rope::RoPEBackward{}.SolverDbId());
     Register(registry, ++id, Primitive::ReLU, prelu::MultiWeightsBackward{}.SolverDbId());
     Register(registry, ++id, Primitive::ReLU, prelu::SingleWeightBackward{}.SolverDbId());
-    
+
+    Register(registry, ++id, Primitive::Kthvalue, kthvalue::KthvalueFwd{}.SolverDbId());
+
+    Register(registry, ++id, Primitive::Activation, glu::GLUForward{}.SolverDbId());
+    Register(registry, ++id, Primitive::Activation, glu::GLUBackward{}.SolverDbId());
+
+    Register(registry,
+             ++id,
+             Primitive::SoftMarginLoss,
+             softmarginloss::SoftMarginLossForward{}.SolverDbId());
+    Register(registry,
+             ++id,
+             Primitive::SoftMarginLoss,
+             softmarginloss::SoftMarginLossBackward{}.SolverDbId());
+    Register(registry,
+             ++id,
+             Primitive::MultiMarginLoss,
+             multimarginloss::MultiMarginLossForward{}.SolverDbId());
+
+    Register(registry, ++id, Primitive::Mha, mha::MhaCKFlashAttentionV2Forward{}.SolverDbId());
+  
     Register(registry,
              ++id,
              Primitive::Loss,
@@ -691,13 +722,16 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
              sigmoidfocalloss::SigmoidFocalLossUnreducedBwd{}.SolverDbId());
     Register(registry, ++id, Primitive::Loss, sigmoidfocalloss::SigmoidFocalLossFwd{}.SolverDbId());
     Register(registry, ++id, Primitive::Loss, sigmoidfocalloss::SigmoidFocalLossBwd{}.SolverDbId());
-
-    // IMPORTANT: New solvers should be added to the end of the function!
+  
+    // IMPORTANT: New solvers should be added to the end of the function, and don't leave a white
+    // space between this comment and the newly registered solver(s)!
 }
 
 bool ThisSolverIsDeprecatedStatic::IsDisabled(const ExecutionContext& ctx)
 {
     static const bool device_is_allowed = [&]() {
+        if(miopen::debug::enable_deprecated_solvers)
+            return true;
         if(env::enabled(MIOPEN_DEBUG_ENABLE_DEPRECATED_SOLVERS))
             return true;
         const auto device = ctx.GetStream().GetTargetProperties().Name();
